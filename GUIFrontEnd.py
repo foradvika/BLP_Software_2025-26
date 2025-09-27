@@ -84,8 +84,8 @@ class FakeTelemetry:
     def upload_test_sequence(self, file_path):
 
         print(f"FakeTelemetry: Uploaded test sequence from {file_path}")
-
-
+    def spark_coil(self):
+        print("FakeTelemetry: Spark coil.")
 
     def get_data(self):
 
@@ -96,20 +96,12 @@ class FakeTelemetry:
         thrust = self.counter % 201
 
         # Cycle pressure values between 0 and 850
-
         pt1 = (self.counter * 2) % 851
-
         pt2 = (self.counter * 3) % 851
-
         pt3 = (self.counter * 4) % 851
-
         pt4 = (self.counter * 5) % 851
-
         pt5 = (self.counter * 6) % 851
-
-        # Return order: [thrust, pt1, pt2, pt3, pt4, pt5]
-
-        return [thrust, pt1, pt2, pt3, pt4, pt5]
+        return [pt1, pt2, pt3, pt4, pt5, thrust]
 
 
 
