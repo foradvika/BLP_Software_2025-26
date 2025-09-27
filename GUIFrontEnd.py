@@ -24,6 +24,7 @@ import time
 
 # from pycode import V1, V2, V3, V4, C, T, CS, A
 
+V1, V2, V3, V4 = 0, 1, 2, 3
 
 
 
@@ -993,7 +994,7 @@ class GUI:
             self.all_data.append(new_data[:6])
 
 
-
+            '''
             #print('Update data arrays')
 
             self.pt1_data.append(new_data[0])
@@ -1007,6 +1008,17 @@ class GUI:
             self.pt5_data.append(new_data[4])
 
             self.thrust_data.append(new_data[5])
+            '''
+            
+            # map FakeTelemetry order -> our arrays
+            thrust, pt1, pt2, pt3, pt4, pt5 = new_data[:6]
+            
+            self.thrust_data.append(thrust)
+            self.pt1_data.append(pt1)
+            self.pt2_data.append(pt2)
+            self.pt3_data.append(pt3)
+            self.pt4_data.append(pt4)
+            self.pt5_data.append(pt5)
 
             
 
@@ -1187,7 +1199,7 @@ class GUI:
 
 
 
-
+'''
 if __name__ == "__main__":
 
     # sys_health = System_Health()
@@ -1205,3 +1217,11 @@ if __name__ == "__main__":
     window = GUI()
 
     window.window.mainloop()
+'''
+
+if __name__ == "__main__":
+    SIMULATION = True
+    tel = FakeTelemetry(sys=None)
+    window = GUI()
+    window.window.mainloop()
+
