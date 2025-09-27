@@ -89,23 +89,5 @@ Add new functions by extending `function_map` in `guifrontend.py`.
 ## Data Logging
 After ABORT or exit, the app writes `test_data.csv` with timestamped values for all six channels.
 
-## Contributing
-1. Create a branch: `git checkout -b feature/<short-name>`
-2. Make small, readable commits with clear messages
-3. Open a PR describing:
-   - What changed
-   - How to test it  
-   - Any safety impact
-
-## Future Documentation Structure
-```
-docs/
-  protocol_uart.md        ← communication specs and examples
-  interlocks_safety.md    ← E-stop, permissives, abort states  
-  runbook_teststand.md    ← setup checklist and procedures
-  data_logging.md         ← file formats and retention
-  changelog.md            ← version history
-```
-
 ## Team
 **Contributors:** Advika Govindarajan, Emily Jones, Adam Abid, Alex Garcia, Pablo Pedrosa
