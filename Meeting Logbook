@@ -1,8 +1,0 @@
-BLP Software Logbook:
-9/27/25
-  - For valve buttons ensure color change AFTER hardware valve is opened/closed 
-
-
-PC GUI - send a high-level command - MCU executes it immediately and deterministically - MCU replies ACK (got it) and DONE (finished, success/fail + latency).
-In parallel, the MCU streams telemetry frames at a steady rate (e.g., 20–50 Hz) like: SENS,opd1,opd2,epd1,fpd1,fpd2,thrust\n  
-The PC only changes button colors/plots after it sees DONE. That guarantees what the GUI shows equals reality.
