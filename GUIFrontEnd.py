@@ -645,7 +645,7 @@ class GUI:
 
             tel.close_valve(V1)
 
-            tel.send_data()
+            #tel.send_data()
 
             self.FV02_button.config(bg="red")
 
@@ -663,7 +663,7 @@ class GUI:
 
             tel.open_valve(V4)
 
-            tel.send_data()
+            #tel.send_data()
 
             self.NV02_button.config(bg="green")
 
@@ -681,7 +681,7 @@ class GUI:
 
             tel.open_valve(V3)
 
-            tel.send_data()
+            #tel.send_data()
 
             self.OV03_button.config(bg="green")
 
@@ -699,7 +699,7 @@ class GUI:
 
             tel.open_valve(V2)
 
-            tel.send_data()
+            #tel.send_data()
 
             self.FV03_button.config(bg="green")
 
@@ -808,7 +808,31 @@ class GUI:
 
 
                     # If it's time to execute this step
+                    any_change = False
+                    EPS = 0.003  # 3 ms de margen
+                    
+                    while self.current_step < len(test_sequence):
+                        target_time, function = test_sequence[self.current_step]
+                        if current_time + EPS < target_time:
+                            break
+                        func = function_map.get(function)
+                        if func:
+                            try:
+                                result = func()      # <--- NO llama send_data adentro
+                                print(f"Executed {function} at {current_time:.3f}s: {result}")
+                                any_change = True
+                            except Exception as e:
+                                print(f"Error executing {function}: {e}")
+                                self.test_running = False
+                        self.current_step += 1
+                    
+                    if any_change:
+                        tel.send_data()  # <--- un único envío para todo el lote
+                    
+                    if self.test_running:
+                        self.window.after(10, execute_test_step)
 
+'''
                     if current_time >= target_time and self.test_running:
 
                         func = function_map.get(function)
@@ -838,19 +862,21 @@ class GUI:
 
 
                     # Schedule next check
+                    tel.send_data()
+
 
                     if self.test_running:
 
                         self.window.after(10, execute_test_step)  # Check every 10ms
 
-
+'''
 
                 # Start the test sequence
 
                 execute_test_step()
 
 
-
+            
             except Exception as e:
 
                 print(f"Error loading file: {e}")
