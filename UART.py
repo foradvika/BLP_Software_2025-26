@@ -3,7 +3,7 @@ import time
 
 # Set the correct serial port (e.g., '/dev/ttyACM0')
 arduino_port = '/dev/ttyACM0'  
-baud_rate = 9600  # Match the baud rate to the Arduino
+baud_rate = 115200  # Match the baud rate to the Arduino
 
 # Open the serial connection to the Arduino
 try:
