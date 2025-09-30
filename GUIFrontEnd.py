@@ -1005,7 +1005,7 @@ class GUI:
 
             # Keep a full record
 
-            ts = time.time() - (self.test_start_time if hasattr(self, "test_Start_time") else self.start_time)
+            ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
 
             self.times.append(ts)
 
