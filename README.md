@@ -1,6 +1,8 @@
 # BLP Test Stand Control Software 2025-26
 Simple front-end + back-end code to run Baylor Liquid Propulsion's test stand. **Currently runs in simulation** - hardware integration coming next. Built to be safe, modular, and easy for new contributors to jump into.
 
+![Example Image](backend-frontend-BLP.png)
+
 ## What's Built
 - **GUI with live plots** - thrust + 5 pressure sensors updating in real-time
 - **Valve controls** - buttons to operate valves manually
