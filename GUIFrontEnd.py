@@ -1029,8 +1029,9 @@ class GUI:
             '''
             
             # map FakeTelemetry order -> our arrays
-            thrust, pt1, pt2, pt3, pt4, pt5 = new_data[:6]
-            
+
+            pt1, pt2, pt3, pt4, pt5, thrust = new_data[:6]  # Match actual order
+
             self.thrust_data.append(thrust)
             self.pt1_data.append(pt1)
             self.pt2_data.append(pt2)
