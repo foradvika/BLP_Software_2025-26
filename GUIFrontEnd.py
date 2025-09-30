@@ -340,6 +340,15 @@ class GUI:
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
 
+        self.both_button = tk.Button(self.window,
+                                     text="FV-03 + OV-03",
+                                     foreground="black",
+                                     background="yellow",
+                                     font=("Times New Roman", 20),
+                                     command=self.open_both_valves)
+        self.both_button.grid(row=2, column=4, sticky="ew", padx=5, pady=5)
+
+
 
         # Start Button
 
@@ -887,7 +896,16 @@ class GUI:
 
     
 
-
+    def open_both_valves(self):
+        """Open FV-03 and OV-03 simultaneously"""
+        tel.open_valve(V2)  # FV-03
+        tel.open_valve(V3)  # OV-03
+        tel.send_data()     # Single transmission for both
+        self.FV03_button.config(bg="green")
+        self.OV03_button.config(bg="green")
+        self.valve_status['FV-03'] = 1
+        self.valve_status['OV-03'] = 1
+        print("FV-03 and OV-03 opened simultaneously")
 
     def toggle_valve(self, name):
 
