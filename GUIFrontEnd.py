@@ -20,22 +20,21 @@ import pandas as pd
 
 import time
 
-# from pycode import Telemetry, System_Health, Metrics
+from pycode import Telemetry, System_Health, Metrics
 
-# from pycode import V1, V2, V3, V4, C, T, CS, A
+from pycode import V1, V2, V3, V4, C, T, CS, A
 
-V1, V2, V3, V4 = 0, 1, 2, 3
 
 
 
 
 # from serial_pc import BT
 
-# import subprocess
+import subprocess
 
-# import datetime
+import datetime
 
-# import json
+import json
 
 
 
@@ -84,8 +83,8 @@ class FakeTelemetry:
     def upload_test_sequence(self, file_path):
 
         print(f"FakeTelemetry: Uploaded test sequence from {file_path}")
-    def spark_coil(self):
-        print("FakeTelemetry: Spark coil.")
+
+
 
     def get_data(self):
 
@@ -96,12 +95,20 @@ class FakeTelemetry:
         thrust = self.counter % 201
 
         # Cycle pressure values between 0 and 850
+
         pt1 = (self.counter * 2) % 851
+
         pt2 = (self.counter * 3) % 851
+
         pt3 = (self.counter * 4) % 851
+
         pt4 = (self.counter * 5) % 851
+
         pt5 = (self.counter * 6) % 851
-        return [pt1, pt2, pt3, pt4, pt5, thrust]
+
+        # Return order: [thrust, pt1, pt2, pt3, pt4, pt5]
+
+        return [thrust, pt1, pt2, pt3, pt4, pt5]
 
 
 
@@ -338,15 +345,6 @@ class GUI:
                                      command=lambda: self.toggle_valve(V3))
 
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
-
-
-        self.both_button = tk.Button(self.window,
-                                     text="FV-03 + OV-03",
-                                     foreground="black",
-                                     background="yellow",
-                                     font=("Times New Roman", 20),
-                                     command=self.open_both_valves)
-        self.both_button.grid(row=2, column=4, sticky="ew", padx=5, pady=5)
 
 
 
@@ -654,7 +652,7 @@ class GUI:
 
             tel.close_valve(V1)
 
-            #tel.send_data()
+            tel.send_data()
 
             self.FV02_button.config(bg="red")
 
@@ -672,7 +670,7 @@ class GUI:
 
             tel.open_valve(V4)
 
-            #tel.send_data()
+            tel.send_data()
 
             self.NV02_button.config(bg="green")
 
@@ -690,7 +688,7 @@ class GUI:
 
             tel.open_valve(V3)
 
-            #tel.send_data()
+            tel.send_data()
 
             self.OV03_button.config(bg="green")
 
@@ -708,7 +706,7 @@ class GUI:
 
             tel.open_valve(V2)
 
-            #tel.send_data()
+            tel.send_data()
 
             self.FV03_button.config(bg="green")
 
@@ -721,14 +719,6 @@ class GUI:
             return ("FV_03 opened")
 
 
-
-        def Spark():                             #Spark function needs to be fixed
-
-            tel.spark_coil()
-
-            tel.send_data()
-
-            return('spark sent')
 
                 
 
@@ -759,8 +749,6 @@ class GUI:
             'FV_03': FV_03_Open,
 
             'BLP_Abort': BLP_Abort,
-
-            'Spark': Spark
 
         }
 
@@ -817,31 +805,7 @@ class GUI:
 
 
                     # If it's time to execute this step
-                    any_change = False
-                    EPS = 0.003  # 3 ms de margen
-                    
-                    while self.current_step < len(test_sequence):
-                        target_time, function = test_sequence[self.current_step]
-                        if current_time + EPS < target_time:
-                            break
-                        func = function_map.get(function)
-                        if func:
-                            try:
-                                result = func()      # <--- NO llama send_data adentro
-                                print(f"Executed {function} at {current_time:.3f}s: {result}")
-                                any_change = True
-                            except Exception as e:
-                                print(f"Error executing {function}: {e}")
-                                self.test_running = False
-                        self.current_step += 1
-                    
-                    if any_change:
-                        tel.send_data()  # <--- un único envío para todo el lote
-                    
-                    if self.test_running:
-                        self.window.after(10, execute_test_step)
 
-'''
                     if current_time >= target_time and self.test_running:
 
                         func = function_map.get(function)
@@ -871,21 +835,19 @@ class GUI:
 
 
                     # Schedule next check
-                    tel.send_data()
-
 
                     if self.test_running:
 
                         self.window.after(10, execute_test_step)  # Check every 10ms
 
-'''
+
 
                 # Start the test sequence
 
                 execute_test_step()
 
 
-            
+
             except Exception as e:
 
                 print(f"Error loading file: {e}")
@@ -896,16 +858,7 @@ class GUI:
 
     
 
-    def open_both_valves(self):
-        """Open FV-03 and OV-03 simultaneously"""
-        tel.open_valve(V2)  # FV-03
-        tel.open_valve(V3)  # OV-03
-        tel.send_data()     # Single transmission for both
-        self.FV03_button.config(bg="green")
-        self.OV03_button.config(bg="green")
-        self.valve_status['FV-03'] = 1
-        self.valve_status['OV-03'] = 1
-        print("FV-03 and OV-03 opened simultaneously")
+
 
     def toggle_valve(self, name):
 
@@ -1023,14 +976,14 @@ class GUI:
 
             # Keep a full record
 
-            ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
+            ts = time.time() - (self.test_start_time if hasattr(self, "test_Start_time") else self.start_time)
 
             self.times.append(ts)
 
             self.all_data.append(new_data[:6])
 
 
-            '''
+
             #print('Update data arrays')
 
             self.pt1_data.append(new_data[0])
@@ -1044,18 +997,6 @@ class GUI:
             self.pt5_data.append(new_data[4])
 
             self.thrust_data.append(new_data[5])
-            '''
-            
-            # map FakeTelemetry order -> our arrays
-
-            pt1, pt2, pt3, pt4, pt5, thrust = new_data[:6]  # Match actual order
-
-            self.thrust_data.append(thrust)
-            self.pt1_data.append(pt1)
-            self.pt2_data.append(pt2)
-            self.pt3_data.append(pt3)
-            self.pt4_data.append(pt4)
-            self.pt5_data.append(pt5)
 
             
 
@@ -1236,10 +1177,10 @@ class GUI:
 
 
 
-'''
+
 if __name__ == "__main__":
 
-    # sys_health = System_Health()
+    sys_health = System_Health()
 
     SIMULATION = False  # Set to False to use real telemetry
 
@@ -1247,17 +1188,11 @@ if __name__ == "__main__":
 
         tel = FakeTelemetry(sys_health)
 
-    # else:
+    else:
 
-        # tel = Telemetry(sys_health)
+        tel = Telemetry(sys_health)
 
     window = GUI()
 
     window.window.mainloop()
-'''
 
-if __name__ == "__main__":
-    SIMULATION = True
-    tel = FakeTelemetry(sys=None)
-    window = GUI()
-    window.window.mainloop()
