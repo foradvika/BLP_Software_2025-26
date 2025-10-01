@@ -3,7 +3,7 @@ import time
 
 # Set the correct serial port (e.g., '/dev/ttyACM0')
 arduino_port = '/dev/ttyACM0'  
-baud_rate = 115200  # Match the baud rate to the Arduino
+baud_rate = 115200 
 
 # Open the serial connection to the Arduino
 try:
@@ -48,12 +48,10 @@ def receive_response():
     rx_data = []
     ser.reset_input_buffer()
     ser.write(b'5')
-  
-    
     opd01_response = ser.readline().decode('latin1').strip()
     
     #print('here')
-    #print(opd01_response)
+    print(opd01_response)
 
     '''
     print(type(opd01_response))
@@ -89,11 +87,6 @@ def receive_response():
     thrust_response = ser.readline().decode('Latin1').strip()
     thrust_response = float(thrust_response)
     rx_data.append(thrust_response)
-    
-    
-    
-    
-   
     
     return rx_data
     '''
