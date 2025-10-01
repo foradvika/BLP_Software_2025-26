@@ -340,6 +340,15 @@ class GUI:
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
 
+        self.both_button = tk.Button(self.window,
+                                     text="FV-03 + OV-03",
+                                     foreground="black",
+                                     background="yellow",
+                                     font=("Times New Roman", 20),
+                                     command=self.open_both_valves)
+        self.both_button.grid(row=2, column=4, sticky="ew", padx=5, pady=5)
+
+
 
         # Start Button
 
@@ -466,27 +475,21 @@ class GUI:
         # Create plots and store references for updates
 
         self.thrust_fig, self.thrust_ax, self.thrust_canvas, self.thrust_line = \
-
             self.create_plot(row=6, column=0, xlabel="Time (s)", ylabel="Thrust (lbf)", data=[])
 
         self.pt1_fig, self.pt1_ax, self.pt1_canvas, self.pt1_line = \
-
             self.create_plot(row=6, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt2_fig, self.pt2_ax, self.pt2_canvas, self.pt2_line = \
-
             self.create_plot(row=6, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt3_fig, self.pt3_ax, self.pt3_canvas, self.pt3_line = \
-
             self.create_plot(row=8, column=0, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt4_fig, self.pt4_ax, self.pt4_canvas, self.pt4_line = \
-
             self.create_plot(row=8, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt5_fig, self.pt5_ax, self.pt5_canvas, self.pt5_line = \
-
             self.create_plot(row=8, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
 
@@ -832,44 +835,44 @@ class GUI:
                     if self.test_running:
                         self.window.after(10, execute_test_step)
 
-'''
-                    if current_time >= target_time and self.test_running:
+# '''
+#                     if current_time >= target_time and self.test_running:
 
-                        func = function_map.get(function)
+#                         func = function_map.get(function)
 
                         
 
-                        if func:
+#                         if func:
 
-                            try:
+#                             try:
 
-                                result = func()
+#                                 result = func()
 
-                                print(f"Executed {function} at {current_time:.3f}s: {result}")
+#                                 print(f"Executed {function} at {current_time:.3f}s: {result}")
 
                                 
 
-                            except Exception as e:
+#                             except Exception as e:
 
-                                print(f"Error executing {function}: {e}")
+#                                 print(f"Error executing {function}: {e}")
 
-                                self.test_running = False
-
-
-
-                        self.current_step += 1
+#                                 self.test_running = False
 
 
 
-                    # Schedule next check
-                    tel.send_data()
+#                         self.current_step += 1
 
 
-                    if self.test_running:
 
-                        self.window.after(10, execute_test_step)  # Check every 10ms
+#                     # Schedule next check
+#                     tel.send_data()
 
-'''
+
+#                     if self.test_running:
+
+#                         self.window.after(10, execute_test_step)  # Check every 10ms
+
+# '''
 
                 # Start the test sequence
 
@@ -887,7 +890,16 @@ class GUI:
 
     
 
-
+    def open_both_valves(self):
+        """Open FV-03 and OV-03 simultaneously"""
+        tel.open_valve(V2)  # FV-03
+        tel.open_valve(V3)  # OV-03
+        tel.send_data()     # Single transmission for both
+        self.FV03_button.config(bg="green")
+        self.OV03_button.config(bg="green")
+        self.valve_status['FV-03'] = 1
+        self.valve_status['OV-03'] = 1
+        print("FV-03 and OV-03 opened simultaneously")
 
     def toggle_valve(self, name):
 
@@ -1243,4 +1255,3 @@ if __name__ == "__main__":
     tel = FakeTelemetry(sys=None)
     window = GUI()
     window.window.mainloop()
-
