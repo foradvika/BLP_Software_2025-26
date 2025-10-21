@@ -188,7 +188,10 @@ class System_Health:
 
 
 
-    sys_stats.update(py_stats, **pi_stats)
+    # sys_stats.update(py_stats, **pi_stats)
+    sys_stats = {}
+    sys_stats.update(py_stats)
+    sys_stats.update(pi_stats)
 
 
 
@@ -387,7 +390,7 @@ class Telemetry:
         return 0
 
 
-
+    '''
     def send_data(self):
 
         # self.wifi.send_command(self.send_data_out())
@@ -398,9 +401,16 @@ class Telemetry:
 
         uart_code1.send_message(self.data_packet)
 
-
-
         return 0
+    '''
+    def send_data(self):
+        payload = []
+        for x in self.data_packet:
+            if isinstance(x, list) and len(x)==1: payload.append(str(x[0]))
+            else: payload.append(str(x))
+        uart_code1.send_message(''.join(payload))
+        return 0
+
 
         
 
