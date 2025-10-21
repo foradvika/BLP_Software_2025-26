@@ -15,6 +15,7 @@ except serial.SerialException as e:
 
 time.sleep(2)  # Wait for the connection to establish
 
+'''
 def send_message(message):
     """
     Send a message one character at a time to the Arduino
@@ -38,7 +39,28 @@ def send_message(message):
         ser.write(','.encode())  
         #print(f"Sent: ,")
         time.sleep(0.05)
+'''
 
+def send_message(message):
+    """
+    Send one packet to Arduino without per-char sleeps - Accepts a string or a list of tokens.
+    """
+    if isinstance(message, (list, tuple)):
+        tokens = []
+        for x in message:
+            if isinstance(x, list) and len(x) == 1:
+                tokens.append(str(x[0]))
+            else:
+                tokens.append(str(x))
+        payload = ''.join(tokens)
+    else:
+        payload = str(message)
+
+    # single write, no sleeps
+    ser.write(payload.encode('latin1', errors='ignore'))
+
+
+'''
 def receive_response():
     """
     Receive data from the Arduino.
@@ -89,6 +111,38 @@ def receive_response():
     rx_data.append(thrust_response)
     
     return rx_data
+    '''
+
+def _read_one_float(cmd: bytes, timeout_s=0.08):
+    """Send a one-byte command and read one line -> float.
+       Short timeout to avoid blocking GUI."""
+    old_timeout = ser.timeout
+    ser.timeout = timeout_s
+    ser.write(cmd)
+    line = ser.readline().decode('latin1', errors='ignore').strip()
+    ser.timeout = old_timeout
+    if not line:
+        raise TimeoutError(f"No data for cmd {cmd!r}")
+    return float(line)
+
+def receive_response():
+    """
+    Legacy mode: request each sensor separately.
+    Returns [OPD_01, OPD_02, EPD_01, FPD_01, FPD_02, THRUST]
+    """
+    rx = []
+    try:
+        rx.append(_read_one_float(b'5'))  # OPD_01
+        rx.append(_read_one_float(b'6'))  # OPD_02
+        rx.append(_read_one_float(b'7'))  # EPD_01
+        rx.append(_read_one_float(b'8'))  # FPD_01
+        rx.append(_read_one_float(b'A'))  # FPD_02
+        rx.append(_read_one_float(b'&'))  # THRUST
+    except Exception as e:
+        # devuelve lo que haya o relanza, aquí prefiero relanzar para que el hilo lo gestione
+        raise
+    return rx
+
     '''
     for i in range(30):  # Check if data is available
         #received_char = ser.read().decode('Latin1')  # Read one byte
