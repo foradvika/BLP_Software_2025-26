@@ -1122,7 +1122,7 @@ class GUI:
 
         # Schedule the next update
 
-        self.after_id = self.window.after(50, self.update_graphs)
+        self.after_id = self.window.after(10, self.update_graphs)
 
 
 
