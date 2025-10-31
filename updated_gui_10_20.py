@@ -346,6 +346,14 @@ class GUI:
 
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
+        self.both_button = tk.Button(self.window,
+                                     text="FV-03 + OV-03",
+                                     foreground="black",
+                                     background="yellow",
+                                     font=("Times New Roman", 20),
+                                     command=self.open_both_valves)
+        self.both_button.grid(row=2, column=4, sticky="ew", padx=5, pady=5)
+
 
 
         # Start Button
