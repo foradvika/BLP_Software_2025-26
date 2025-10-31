@@ -346,6 +346,15 @@ class GUI:
 
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
+        # Both Button (FV-03 + OV-03)
+        self.both_button = tk.Button(self.window,
+                                     text="FV-03 + OV-03",
+                                     foreground="black",
+                                     background="yellow",
+                                     font=("Times New Roman", 20),
+                                     command=self.open_both_valves)
+        self.both_button.grid(row=2, column=4, sticky="ew", padx=5, pady=5)
+
 
 
         # Start Button
@@ -473,27 +482,21 @@ class GUI:
         # Create plots and store references for updates
 
         self.thrust_fig, self.thrust_ax, self.thrust_canvas, self.thrust_line = \
-
             self.create_plot(row=6, column=0, xlabel="Time (s)", ylabel="Thrust (lbf)", data=[])
 
         self.pt1_fig, self.pt1_ax, self.pt1_canvas, self.pt1_line = \
-
             self.create_plot(row=6, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt2_fig, self.pt2_ax, self.pt2_canvas, self.pt2_line = \
-
             self.create_plot(row=6, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt3_fig, self.pt3_ax, self.pt3_canvas, self.pt3_line = \
-
             self.create_plot(row=8, column=0, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt4_fig, self.pt4_ax, self.pt4_canvas, self.pt4_line = \
-
             self.create_plot(row=8, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt5_fig, self.pt5_ax, self.pt5_canvas, self.pt5_line = \
-
             self.create_plot(row=8, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
 
@@ -538,7 +541,8 @@ class GUI:
 
         print("Test started")
 
-        self.start_time = time.time()  
+        self.start_time = time.time()
+        self.test_start_time = self.start_time
 
         #print('record test start time')
 
@@ -854,11 +858,23 @@ class GUI:
 
                 self.test_running = False
 
-            
-
-    
 
 
+
+
+    def open_both_valves(self):
+        """Open both FV-03 and OV-03 valves simultaneously using the combined spark valve operation."""
+        # Open V3 (OV-03) using the combined command 'D'
+        tel.open_valve(V3)
+        tel.send_data()
+        self.OV03_button.config(bg="green")
+        self.valve_status['OV-03'] = 1
+
+        # Also mark FV-03 as opened since they open together
+        self.FV03_button.config(bg="green")
+        self.valve_status['FV-03'] = 1
+
+        print("Both FV-03 and OV-03 opened simultaneously (spark ignition)")
 
     def toggle_valve(self, name):
 
@@ -976,27 +992,17 @@ class GUI:
 
             # Keep a full record
 
-            ts = time.time() - (self.test_start_time if hasattr(self, "test_Start_time") else self.start_time)
+            ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
+            opd1, opd2, epd1, fpd1, fpd2, thrust = new_data[:6]
 
             self.times.append(ts)
-
-            self.all_data.append(new_data[:6])
-
-
-
-            #print('Update data arrays')
-
-            self.pt1_data.append(new_data[0])
-
-            self.pt2_data.append(new_data[1])
-
-            self.pt3_data.append(new_data[2])
-
-            self.pt4_data.append(new_data[3])
-
-            self.pt5_data.append(new_data[4])
-
-            self.thrust_data.append(new_data[5])
+            self.pt1_data.append(opd1)
+            self.pt2_data.append(opd2)
+            self.pt3_data.append(epd1)
+            self.pt4_data.append(fpd1)
+            self.pt5_data.append(fpd2)
+            self.thrust_data.append(thrust)
+            self.all_data.append([opd1, opd2, epd1, fpd1, fpd2, thrust])
 
             
 
@@ -1116,7 +1122,7 @@ class GUI:
 
         # Schedule the next update
 
-        self.after_id = self.window.after(1000, self.update_graphs)
+        self.after_id = self.window.after(50, self.update_graphs)
 
 
 
