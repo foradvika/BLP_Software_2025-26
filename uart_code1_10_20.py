@@ -1,0 +1,172 @@
+import serial
+import time
+
+# Set the correct serial port (e.g., '/dev/ttyACM0')
+arduino_port = '/dev/ttyACM0'  
+baud_rate = 115200 
+
+# Open the serial connection to the Arduino
+try:
+    ser = serial.Serial(arduino_port, baud_rate, timeout=1)
+    print(f"Connected to Arduino on port {arduino_port}")
+except serial.SerialException as e:
+    print(f"Error connecting to the Arduino: {e}")
+    exit()
+
+time.sleep(2)  # Wait for the connection to establish
+
+'''
+def send_message(message):
+    """
+    Send a message one character at a time to the Arduino
+    with delimiters as per the request (e.g., "[" "H" "," "e" ",").
+    """
+    ser.reset_output_buffer()
+    for char in message:
+        # Send '['
+        ser.write('['.encode())
+        #print(f"Sent: [")
+        time.sleep(0.05)
+        
+        # Send the character
+        #print(type(char))
+        #print(char)
+        ser.write(str(char).encode())
+        #print(f"Sent: {char}")
+        time.sleep(0.05)
+        
+        # Send ','
+        ser.write(','.encode())  
+        #print(f"Sent: ,")
+        time.sleep(0.05)
+'''
+
+def send_message(message):
+    """
+    Send one packet to Arduino without per-char sleeps - Accepts a string or a list of tokens.
+    """
+    if isinstance(message, (list, tuple)):
+        tokens = []
+        for x in message:
+            if isinstance(x, list) and len(x) == 1:
+                tokens.append(str(x[0]))
+            else:
+                tokens.append(str(x))
+        payload = ''.join(tokens)
+    else:
+        payload = str(message)
+
+    # single write, no sleeps
+    ser.write(payload.encode('latin1', errors='ignore'))
+
+
+'''
+def receive_response():
+    """
+    Receive data from the Arduino.
+    This function reads the response one character at a time.
+    """
+    #print('Recieving Response')
+    rx_data = []
+    ser.reset_input_buffer()
+    ser.write(b'5')
+    opd01_response = ser.readline().decode('latin1').strip()
+    
+    #print('here')
+    print(opd01_response)
+
+    '''
+    print(type(opd01_response))
+    
+    These valuescomefromthe arduino as strings so they need to
+    be converted.
+    '''
+    opd01_response = float(opd01_response)
+    #print('here2')
+    rx_data.append(opd01_response)
+    ser.write(b'6')
+    
+    opd02_response = ser.readline().decode('Latin1').strip()
+    opd02_response = float(opd02_response)
+    rx_data.append(opd02_response)
+    ser.write(b'7')
+    
+    epd01_response = ser.readline().decode('Latin1').strip()
+    epd01_response = float(epd01_response)
+    rx_data.append(epd01_response)
+    
+    ser.write(b'8')
+    fpd01_response = ser.readline().decode('Latin1').strip()
+    fpd01_response = float(fpd01_response)
+    rx_data.append(fpd01_response)
+    
+    ser.write(b'A')
+    fpd02_response = ser.readline().decode('Latin1').strip()
+    fpd02_response = float(fpd02_response)
+    rx_data.append(fpd02_response)
+   
+    ser.write(b'&')
+    thrust_response = ser.readline().decode('Latin1').strip()
+    thrust_response = float(thrust_response)
+    rx_data.append(thrust_response)
+    
+    return rx_data
+    '''
+
+def _read_one_float(cmd: bytes, timeout_s=0.08):
+    """Send a one-byte command and read one line -> float.
+       Short timeout to avoid blocking GUI."""
+    old_timeout = ser.timeout
+    ser.timeout = timeout_s
+    ser.write(cmd)
+    line = ser.readline().decode('latin1', errors='ignore').strip()
+    ser.timeout = old_timeout
+    if not line:
+        raise TimeoutError(f"No data for cmd {cmd!r}")
+    return float(line)
+
+def receive_response():
+    """
+    Legacy mode: request each sensor separately.
+    Returns [OPD_01, OPD_02, EPD_01, FPD_01, FPD_02, THRUST]
+    """
+    rx = []
+    try:
+        rx.append(_read_one_float(b'5'))  # OPD_01
+        rx.append(_read_one_float(b'6'))  # OPD_02
+        rx.append(_read_one_float(b'7'))  # EPD_01
+        rx.append(_read_one_float(b'8'))  # FPD_01
+        rx.append(_read_one_float(b'A'))  # FPD_02
+        rx.append(_read_one_float(b'&'))  # THRUST
+    except Exception as e:
+        # devuelve lo que haya o relanza, aquí prefiero relanzar para que el hilo lo gestione
+        raise
+    return rx
+
+    '''
+    for i in range(30):  # Check if data is available
+        #received_char = ser.read().decode('Latin1')  # Read one byte
+        received_char = ser.read()  # Read one byte
+        print('HERE')
+        rx_data.append(received_char)
+    return rx_data
+    '''
+'''
+def main():
+    try:
+        while True:
+            message = "[1,2,3,4,!,@,#,$]"  # Example message to send
+            send_message(message)  # Send the message to Arduino
+
+            # Receive the response from Arduino
+            time.sleep(1)  # Wait for Arduino to echo back all characters
+
+    except KeyboardInterrupt:
+        print("Communication terminated by user.")
+    finally:
+        if ser.is_open:
+            ser.close()  # Close the serial port when done
+            print("Serial port closed.")
+
+if __name__ == "
+'''
