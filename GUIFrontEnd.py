@@ -224,9 +224,23 @@ class GUI:
 
         self.valve_status = {'NV-02': 0, 'FV-02': 0, 'FV-03': 0, 'OV-03': 0}
 
+        self.busy = False
+
         self.widgets()
 
+    def _with_lock(self, fn):
+        if self.busy:
+            return
+        self.busy = True
+        try:
+            fn()
+        finally:
+            self.busy = False
 
+    def _disable_valve_buttons(self, disabled=True):
+        state = tk.DISABLED if disabled else tk.NORMAL
+        for b in (self.FV03_button, self.OV03_button, self.FV02_button, self.NV02_button):
+            b.config(state=state)
 
     def widgets(self):
 
@@ -346,7 +360,16 @@ class GUI:
 
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
+        # Botones macro para abrir/cerrar ambas válvulas
+        self.both_open_btn = tk.Button(self.window, text="Abrir FV-03 + OV-03",
+                                       font=("Times New Roman", 16),
+                                       command=self.open_both_valves_safe)
+        self.both_open_btn.grid(row=3, column=2, sticky="ew", padx=5, pady=5)
 
+        self.both_close_btn = tk.Button(self.window, text="Cerrar FV-03 + OV-03",
+                                        font=("Times New Roman", 16),
+                                        command=self.close_both_valves_safe)
+        self.both_close_btn.grid(row=3, column=3, sticky="ew", padx=5, pady=5)
 
         # Start Button
 
@@ -473,27 +496,21 @@ class GUI:
         # Create plots and store references for updates
 
         self.thrust_fig, self.thrust_ax, self.thrust_canvas, self.thrust_line = \
-
             self.create_plot(row=6, column=0, xlabel="Time (s)", ylabel="Thrust (lbf)", data=[])
 
         self.pt1_fig, self.pt1_ax, self.pt1_canvas, self.pt1_line = \
-
             self.create_plot(row=6, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt2_fig, self.pt2_ax, self.pt2_canvas, self.pt2_line = \
-
             self.create_plot(row=6, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt3_fig, self.pt3_ax, self.pt3_canvas, self.pt3_line = \
-
             self.create_plot(row=8, column=0, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt4_fig, self.pt4_ax, self.pt4_canvas, self.pt4_line = \
-
             self.create_plot(row=8, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
         self.pt5_fig, self.pt5_ax, self.pt5_canvas, self.pt5_line = \
-
             self.create_plot(row=8, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
 
@@ -854,11 +871,35 @@ class GUI:
 
                 self.test_running = False
 
-            
-
-    
 
 
+    def open_both_valves_safe(self):
+        if self.busy: return
+        self._disable_valve_buttons(True)
+        def step1():
+            tel.open_valve(V2); tel.send_data()
+            self.FV03_button.config(bg="green"); self.valve_status['FV-03'] = 1
+            # tras 100 ms abre OV-03
+            self.window.after(100, step2)
+        def step2():
+            tel.open_valve(V3); tel.send_data()
+            self.OV03_button.config(bg="green"); self.valve_status['OV-03'] = 1
+            self._disable_valve_buttons(False)
+        self._with_lock(step1)
+
+    def close_both_valves_safe(self):
+        if self.busy: return
+        self._disable_valve_buttons(True)
+        def step1():
+            tel.close_valve(V3); tel.send_data()
+            self.OV03_button.config(bg="red"); self.valve_status['OV-03'] = 0
+            # tras 100 ms cierra FV-03
+            self.window.after(100, step2)
+        def step2():
+            tel.close_valve(V2); tel.send_data()
+            self.FV03_button.config(bg="red"); self.valve_status['FV-03'] = 0
+            self._disable_valve_buttons(False)
+        self._with_lock(step1)
 
     def toggle_valve(self, name):
 
