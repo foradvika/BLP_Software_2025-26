@@ -555,7 +555,8 @@ class GUI:
 
         print("Test started")
 
-        self.start_time = time.time()  
+        self.start_time = time.time()
+        self.test_start_time = self.start_time
 
         #print('record test start time')
 
@@ -1017,27 +1018,17 @@ class GUI:
 
             # Keep a full record
 
-            ts = time.time() - (self.test_start_time if hasattr(self, "test_Start_time") else self.start_time)
+            ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
+            opd1, opd2, epd1, fpd1, fpd2, thrust = new_data[:6]
 
             self.times.append(ts)
-
-            self.all_data.append(new_data[:6])
-
-
-
-            #print('Update data arrays')
-
-            self.pt1_data.append(new_data[0])
-
-            self.pt2_data.append(new_data[1])
-
-            self.pt3_data.append(new_data[2])
-
-            self.pt4_data.append(new_data[3])
-
-            self.pt5_data.append(new_data[4])
-
-            self.thrust_data.append(new_data[5])
+            self.pt1_data.append(opd1)
+            self.pt2_data.append(opd2)
+            self.pt3_data.append(epd1)
+            self.pt4_data.append(fpd1)
+            self.pt5_data.append(fpd2)
+            self.thrust_data.append(thrust)
+            self.all_data.append([opd1, opd2, epd1, fpd1, fpd2, thrust])
 
             
 
@@ -1157,7 +1148,7 @@ class GUI:
 
         # Schedule the next update
 
-        self.after_id = self.window.after(1000, self.update_graphs)
+        self.after_id = self.window.after(50, self.update_graphs)
 
 
 
