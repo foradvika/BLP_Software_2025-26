@@ -647,7 +647,7 @@ class GUI:
 
         def Read_OPD_02():
 
-            print(self.pt1_data)
+            print(self.pt2_data)
 
              #if self.pt1_data and self.pt1_data[-1] < 15:
 
@@ -1030,7 +1030,7 @@ class GUI:
     
         if new_data and len(new_data) >= 6:
             ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
-            opd1, opd2, epd1, fpd1, fpd2, thrust = new_data[:6]
+            opd2, opd1, epd1, fpd1, fpd2, thrust = new_data[:6]
     
             self.times.append(ts)
             self.pt1_data.append(opd1)
