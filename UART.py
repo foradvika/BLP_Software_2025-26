@@ -7,7 +7,7 @@ baud_rate = 115200
 
 # Open the serial connection to the Arduino
 try:
-    ser = serial.Serial(arduino_port, baud_rate, timeout=1)
+    ser = serial.Serial(arduino_port, baud_rate, timeout=0.05)
     print(f"Connected to Arduino on port {arduino_port}")
 except serial.SerialException as e:
     print(f"Error connecting to the Arduino: {e}")
@@ -41,54 +41,33 @@ def send_message(message):
 
 def receive_response():
     """
-    Receive data from the Arduino.
-    This function reads the response one character at a time.
+    read 6 channels with filter, if first line is not number, continue reading.
     """
-    #print('Recieving Response')
-    rx_data = []
-    ser.reset_input_buffer()
-    ser.write(b'5')
-    opd01_response = ser.readline().decode('latin1').strip()
-    
-    #print('here')
-    print(opd01_response)
+    import re, time
+    _FLOAT_RE = re.compile(r"^-?\d+(?:\.\d+)?$")
 
-    '''
-    print(type(opd01_response))
-    
-    These valuescomefromthe arduino as strings so they need to
-    be converted.
-    '''
-    opd01_response = float(opd01_response)
-    #print('here2')
-    rx_data.append(opd01_response)
-    ser.write(b'6')
-    
-    opd02_response = ser.readline().decode('Latin1').strip()
-    opd02_response = float(opd02_response)
-    rx_data.append(opd02_response)
-    ser.write(b'7')
-    
-    epd01_response = ser.readline().decode('Latin1').strip()
-    epd01_response = float(epd01_response)
-    rx_data.append(epd01_response)
-    
-    ser.write(b'8')
-    fpd01_response = ser.readline().decode('Latin1').strip()
-    fpd01_response = float(fpd01_response)
-    rx_data.append(fpd01_response)
-    
-    ser.write(b'A')
-    fpd02_response = ser.readline().decode('Latin1').strip()
-    fpd02_response = float(fpd02_response)
-    rx_data.append(fpd02_response)
-   
-    ser.write(b'&')
-    thrust_response = ser.readline().decode('Latin1').strip()
-    thrust_response = float(thrust_response)
-    rx_data.append(thrust_response)
-    
-    return rx_data
+    def read_float_line(deadline_s=0.20):
+        end = time.time() + deadline_s
+        last = ""
+        while time.time() < end:
+            line = ser.readline().decode('latin1', 'ignore').strip()
+            if not line:
+                continue
+            last = line
+            if _FLOAT_RE.match(line):
+                return float(line)
+            # if log not number, ignore
+        raise ValueError(f"Non-numeric/timeout. Last='{last}'")
+
+    rx = []
+    ser.reset_input_buffer()  # clean only at start of cycle
+
+    for cmd in (b'5', b'6', b'7', b'8', b'A', b'&'):
+        ser.write(cmd); ser.flush()
+        rx.append(read_float_line(0.20))
+
+    return rx
+
     '''
     for i in range(30):  # Check if data is available
         #received_char = ser.read().decode('Latin1')  # Read one byte
