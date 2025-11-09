@@ -225,6 +225,14 @@ class GUI:
         self.valve_status = {'NV-02': 0, 'FV-02': 0, 'FV-03': 0, 'OV-03': 0}
 
         self.busy = False
+        self.running = False
+
+        # new data after abort
+        self.POST_ABORT_TAIL_S = 5.0  
+        self.tail_deadline = None     
+        self.tail_saving_done = False  
+        
+
 
         self.widgets()
 
@@ -551,20 +559,23 @@ class GUI:
 
 
 
+
     def start(self):
-
         print("Test started")
-
         self.start_time = time.time()
         self.test_start_time = self.start_time
-
         #print('record test start time')
-
+        
+        self.running = True
+        
+        self.tail_deadline = None
+        self.tail_saving_done = False
+        
         self.update_graphs()  # start telemetry update loop
-
         self.start_button.config(background="green")
-
+        
         #self.abort_button.config(background="red")
+
 
 
 
@@ -596,23 +607,23 @@ class GUI:
 
 
 
-        # Stop the update loop
-
-        if hasattr(self, "after_id") and self.after_id:
-
-            self.window.after_cancel(self.after_id)
-
-
-
-        # Save data to CSV
-
-        self.save_data_to_csv()
-
-
-
-        # Optionally, show a message
-
-        messagebox.showinfo("Test Data Saved", "All telemetry data has been saved to test_data.csv")
+        if self.POST_ABORT_TAIL_S and self.POST_ABORT_TAIL_S > 0:
+            self.tail_deadline = time.time() + self.POST_ABORT_TAIL_S
+            self.tail_saving_done = False
+            # continue with self.running=True to keep reading
+            self.running = True
+            self.warning_label.config(
+                text=f"ABORT: registering {self.POST_ABORT_TAIL_S:.1f}s post-event…"
+            )
+            
+        else:
+            # stop at abort
+            self.running = False
+            if hasattr(self, "after_id") and self.after_id:
+                self.window.after_cancel(self.after_id)
+                self.after_id = None
+            self.save_data_to_csv()
+            messagebox.showinfo("Test Data Saved", "All telemetry data has been saved to test_data.csv")
 
 
 
@@ -1007,20 +1018,20 @@ class GUI:
 
 
     def update_graphs(self):
-
-        new_data = tel.get_data()
-
-        #print('Got data')
-
+        if not self.running:
+            return
+    
+        try:
+            new_data = tel.get_data()
+        except Exception as e:
+            print("telemetry read error:", e)
+            self.after_id = self.window.after(50, self.update_graphs)
+            return
+    
         if new_data and len(new_data) >= 6:
-
-            #print('Good data')
-
-            # Keep a full record
-
             ts = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
             opd1, opd2, epd1, fpd1, fpd2, thrust = new_data[:6]
-
+    
             self.times.append(ts)
             self.pt1_data.append(opd1)
             self.pt2_data.append(opd2)
@@ -1029,127 +1040,58 @@ class GUI:
             self.pt5_data.append(fpd2)
             self.thrust_data.append(thrust)
             self.all_data.append([opd1, opd2, epd1, fpd1, fpd2, thrust])
-
-            
-
-             
-
-
-
-            #print('Update plots')
-
+    
             self.pt1_line.set_data(range(len(self.pt1_data)), self.pt1_data)
-
-            self.pt1_ax.relim()
-
-            self.pt1_ax.autoscale_view()
-
-            self.pt1_canvas.draw()
-
-
-
+            self.pt1_ax.relim(); self.pt1_ax.autoscale_view(); self.pt1_canvas.draw()
+    
             self.pt2_line.set_data(range(len(self.pt2_data)), self.pt2_data)
-
-            self.pt2_ax.relim()
-
-            self.pt2_ax.autoscale_view()
-
-            self.pt2_canvas.draw()
-
-
-
+            self.pt2_ax.relim(); self.pt2_ax.autoscale_view(); self.pt2_canvas.draw()
+    
             self.pt3_line.set_data(range(len(self.pt3_data)), self.pt3_data)
-
-            self.pt3_ax.relim()
-
-            self.pt3_ax.autoscale_view()
-
-            self.pt3_canvas.draw()
-
-
-
+            self.pt3_ax.relim(); self.pt3_ax.autoscale_view(); self.pt3_canvas.draw()
+    
             self.pt4_line.set_data(range(len(self.pt4_data)), self.pt4_data)
-
-            self.pt4_ax.relim()
-
-            self.pt4_ax.autoscale_view()
-
-            self.pt4_canvas.draw()
-
-            
-
+            self.pt4_ax.relim(); self.pt4_ax.autoscale_view(); self.pt4_canvas.draw()
+    
             self.pt5_line.set_data(range(len(self.pt5_data)), self.pt5_data)
-
-            self.pt5_ax.relim()
-
-            self.pt5_ax.autoscale_view()
-
-            self.pt5_canvas.draw()
-
-
-
+            self.pt5_ax.relim(); self.pt5_ax.autoscale_view(); self.pt5_canvas.draw()
+    
             self.thrust_line.set_data(range(len(self.thrust_data)), self.thrust_data)
+            self.thrust_ax.relim(); self.thrust_ax.autoscale_view(); self.thrust_canvas.draw()
+    
+            # Timer
+            elapsed = time.time() - (self.test_start_time if hasattr(self, "test_start_time") else self.start_time)
+            self.timer_label.config(text=f"Elapsed Time: {elapsed:.1f} s")
+    
+            # Warnings
+            alerts = []
+            if epd1 > 350: alerts.append("Almost too high EPD_01!")
+            if epd1 < 150: alerts.append("Almost too low EPD_01!")
+            if fpd1 > 530: alerts.append("Almost too high FPD_01!")
+            if opd1 > 825: alerts.append("Almost too high OPD_01!")
+            self.warning_label.config(text="\n".join(alerts))
+    
+        if (self.tail_deadline is not None) and (time.time() >= self.tail_deadline) and (not self.tail_saving_done):
+            self.tail_saving_done = True
+            self.running = False
+            self.tail_deadline = None
+            self.warning_label.config(text=" ")
+            try:
+                if hasattr(self, "after_id") and self.after_id:
+                    self.window.after_cancel(self.after_id)
+            except Exception:
+                pass
+            self.after_id = None
+            self.save_data_to_csv()
+            messagebox.showinfo("Test Data Saved", "All telemetry data has been saved to test_data.csv")
+            return 
+    
+        if self.running:
+            self.after_id = self.window.after(50, self.update_graphs)
+        else:
+            self.after_id = None
 
-            self.thrust_ax.relim()
-
-            self.thrust_ax.autoscale_view()
-
-            self.thrust_canvas.draw()
-
-            #print('Updated')
-
-
-
-            # Update timer - use the test start time for accuracy
-
-            if hasattr(self, 'test_start_time'):
-
-                elapsed = time.time() - self.test_start_time
-
-                self.timer_label.config(text=f"Elapsed Time: {elapsed:.1f} s")
-
-            elif hasattr(self, 'start_time'):
-
-                elapsed = time.time() - self.start_time
-
-                self.timer_label.config(text=f"Elapsed Time: {elapsed:.1f} s")
-
-
-
-            # Optional warnings
-
-            
-
-            warning_messages = []
-
-            if self.pt1_data and self.pt1_data[-1] > 350:  # Called "EPD_01" in original code
-
-                warning_messages.append("Almost too high EPD_01!")
-
-            if self.pt1_data and self.pt1_data[-1] < 150:
-
-                warning_messages.append("Almost too low EPD_01!")
-
-            if self.pt2_data and self.pt2_data[-1] > 530:
-
-                warning_messages.append("Almost too high FPD_01!")
-
-            if self.pt3_data and self.pt3_data[-1] > 825:
-
-                warning_messages.append("Almost too high OPD_01!")
-
-
-
-            self.warning_label.config(text="\n".join(warning_messages))
-
-            
-
-
-
-        # Schedule the next update
-
-        self.after_id = self.window.after(50, self.update_graphs)
-
+    
 
 
     def save_data_to_csv(self):
