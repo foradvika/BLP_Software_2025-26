@@ -108,9 +108,10 @@ class GUI:
         self.valve_status = {'NV-02': 0, 'FV-02': 0, 'FV-03': 0, 'OV-03': 0}
         self.busy = False
         self.running = False
-        self.POST_ABORT_TAIL_S = 5.0
+        self.POST_ABORT_TAIL_S = 10.0
         self.tail_deadline = None
         self.tail_saving_done = False
+        self.abort_time = None
 
         self.widgets()
 
@@ -313,6 +314,7 @@ class GUI:
         self.running = True
         self.tail_deadline = None
         self.tail_saving_done = False
+        self.abort_time = None
         self.update_graphs()
         self.start_button.config(background="green")
 
@@ -327,6 +329,10 @@ class GUI:
         self.valve_status['OV-03'] = 1
 
     def abort(self):
+        # Record abort timestamp
+        self.abort_time = time.time() - self.start_time
+        print(f"Manual Test aborted at t={self.abort_time:.3f}s")
+
         tel.abort()
         tel.send_data()
         self.OV03_button.config(bg="red")
@@ -338,7 +344,6 @@ class GUI:
         self.NV02_button.config(bg="red")
         self.valve_status['NV-02'] = 0
         self.test_running = False
-        print("Manual Test aborted")
 
         if self.POST_ABORT_TAIL_S and self.POST_ABORT_TAIL_S > 0:
             self.tail_deadline = time.time() + self.POST_ABORT_TAIL_S
@@ -672,6 +677,22 @@ class GUI:
             self.after_id = None
 
     def save_data_to_csv(self):
+        # Add metadata rows
+        data = []
+        data.append(["# Test Metadata", ""])
+        data.append(["Test Date", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+
+        if self.abort_time is not None:
+            data.append(["Abort Time (s)", f"{self.abort_time:.3f}"])
+        else:
+            data.append(["Abort Time (s)", "N/A - Test completed normally"])
+
+        data.append(["Post-Abort Tail Duration (s)", f"{self.POST_ABORT_TAIL_S:.1f}"])
+        data.append(["Total Data Points", str(len(self.all_data))])
+        data.append(["", ""])
+        data.append(["# Sensor Data", ""])
+
+        # Add sensor data
         sensors = {"OPD_01": [], "OPD_02": [], "EPD_01": [], "FPD_01": [], "FPD_02": [], "THRUST": []}
         i = 0
         for row in self.all_data:
@@ -684,7 +705,6 @@ class GUI:
             sensors["THRUST"].append(f"{t:.2f}:{row[5]}")
             i += 1
 
-        data = []
         for sensor, pairs in sensors.items():
             data.append([sensor, ", ".join(pairs)])
 
