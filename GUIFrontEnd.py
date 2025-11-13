@@ -63,15 +63,17 @@ class GUI:
         self.pt4_data = []
         self.pt5_data = []
         self.all_data = []
-        self.times = []
+        self.times = []  # Arduino timestamps for CSV (normalized to 0)
+        self.display_times = []  # Python timestamps for smooth GUI display
+        self.time_offset = None  # To normalize Arduino timestamps to start at 0
 
         # Placeholders for plot elements
-        self.thrust_fig = self.thrust_ax = self.thrust_canvas = self.thrust_line = None
-        self.pt1_fig = self.pt1_ax = self.pt1_canvas = self.pt1_line = None
-        self.pt2_fig = self.pt2_ax = self.pt2_canvas = self.pt2_line = None
-        self.pt3_fig = self.pt3_ax = self.pt3_canvas = self.pt3_line = None
-        self.pt4_fig = self.pt4_ax = self.pt4_canvas = self.pt4_line = None
-        self.pt5_fig = self.pt5_ax = self.pt5_canvas = self.pt5_line = None
+        self.thrust_fig = self.thrust_ax = self.thrust_canvas = self.thrust_line = self.thrust_bg = None
+        self.pt1_fig = self.pt1_ax = self.pt1_canvas = self.pt1_line = self.pt1_bg = None
+        self.pt2_fig = self.pt2_ax = self.pt2_canvas = self.pt2_line = self.pt2_bg = None
+        self.pt3_fig = self.pt3_ax = self.pt3_canvas = self.pt3_line = self.pt3_bg = None
+        self.pt4_fig = self.pt4_ax = self.pt4_canvas = self.pt4_line = self.pt4_bg = None
+        self.pt5_fig = self.pt5_ax = self.pt5_canvas = self.pt5_line = self.pt5_bg = None
 
         # UI element placeholders
         self.chart_canvas = None
@@ -189,17 +191,6 @@ class GUI:
                                      command=lambda: self.toggle_valve(V3))
         self.OV03_button.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
 
-        # Macro buttons for opening/closing both valves
-        self.both_open_btn = tk.Button(self.window, text="Abrir FV-03 + OV-03",
-                                       font=("Times New Roman", 16),
-                                       command=self.open_both_valves_safe)
-        self.both_open_btn.grid(row=3, column=2, sticky="ew", padx=5, pady=5)
-
-        self.both_close_btn = tk.Button(self.window, text="Cerrar FV-03 + OV-03",
-                                        font=("Times New Roman", 16),
-                                        command=self.close_both_valves_safe)
-        self.both_close_btn.grid(row=3, column=3, sticky="ew", padx=5, pady=5)
-
         # Start Button
         self.start_button = tk.Button(self.window,
                                       text="START",
@@ -270,51 +261,84 @@ class GUI:
                                   font=("Times New Roman", 15))
         self.PT5_label.grid(row=7, column=4, sticky="nsew", padx=5, pady=5)
 
-        # Create plots and store references for updates
-        self.thrust_fig, self.thrust_ax, self.thrust_canvas, self.thrust_line = \
+        # Create plots and store references for updates (with backgrounds for blitting)
+        self.thrust_fig, self.thrust_ax, self.thrust_canvas, self.thrust_line, self.thrust_bg = \
             self.create_plot(row=6, column=0, xlabel="Time (s)", ylabel="Thrust (lbf)", data=[])
 
-        self.pt1_fig, self.pt1_ax, self.pt1_canvas, self.pt1_line = \
+        self.pt1_fig, self.pt1_ax, self.pt1_canvas, self.pt1_line, self.pt1_bg = \
             self.create_plot(row=6, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
-        self.pt2_fig, self.pt2_ax, self.pt2_canvas, self.pt2_line = \
+        self.pt2_fig, self.pt2_ax, self.pt2_canvas, self.pt2_line, self.pt2_bg = \
             self.create_plot(row=6, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
-        self.pt3_fig, self.pt3_ax, self.pt3_canvas, self.pt3_line = \
+        self.pt3_fig, self.pt3_ax, self.pt3_canvas, self.pt3_line, self.pt3_bg = \
             self.create_plot(row=8, column=0, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
-        self.pt4_fig, self.pt4_ax, self.pt4_canvas, self.pt4_line = \
+        self.pt4_fig, self.pt4_ax, self.pt4_canvas, self.pt4_line, self.pt4_bg = \
             self.create_plot(row=8, column=2, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
-        self.pt5_fig, self.pt5_ax, self.pt5_canvas, self.pt5_line = \
+        self.pt5_fig, self.pt5_ax, self.pt5_canvas, self.pt5_line, self.pt5_bg = \
             self.create_plot(row=8, column=4, xlabel="Time (s)", ylabel="Pressure (PSI)", data=[])
 
     def create_plot(self, row, column, xlabel, ylabel, data):
-        fig = Figure(figsize=(5, 3), dpi=100)
-        ax = fig.add_subplot(111)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        ax.grid(True)
+        # Professional figure with clean white background
+        fig = Figure(figsize=(5, 3), dpi=100, facecolor='white')
+        ax = fig.add_subplot(111, facecolor='white')
+
+        # Clean, readable labels
+        ax.set_xlabel(xlabel, fontsize=10, fontfamily='sans-serif')
+        ax.set_ylabel(ylabel, fontsize=10, fontfamily='sans-serif')
+
+        # Subtle grid for better readability
+        ax.grid(True, alpha=0.2, linestyle='-', linewidth=0.8)
+        ax.set_axisbelow(True)  # Grid behind data
+
+        # Smooth line plotting with animated=True for blitting
         if data:
-            line, = ax.plot(range(len(data)), data)
+            line, = ax.plot(range(len(data)), data, linewidth=1.8, antialiased=True, animated=True)
         else:
-            line, = ax.plot([], [])
-        fig.tight_layout(pad=3.0)
-        fig.subplots_adjust(bottom=0.3, top=0.9)
+            line, = ax.plot([], [], linewidth=1.8, antialiased=True, animated=True)
+
+        # Remove top and right spines for cleaner look
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        # Tight layout with better spacing
+        fig.tight_layout(pad=1.5)
+        fig.subplots_adjust(left=0.12, right=0.96, bottom=0.15, top=0.96)
+
+        # Canvas setup with smooth rendering
         canvas = FigureCanvasTkAgg(fig, master=self.window)
         canvas_widget = canvas.get_tk_widget()
+        canvas_widget.configure(highlightthickness=0)
         canvas_widget.grid(row=row, column=column, columnspan=2, sticky="nsew", padx=5, pady=5)
         canvas.draw()
-        return fig, ax, canvas, line
+
+        # Capture background for blitting (pencil-like drawing effect)
+        background = canvas.copy_from_bbox(ax.bbox)
+
+        return fig, ax, canvas, line, background
 
     def start(self):
         print("Test started")
+        # Clear all data from previous tests
+        self.thrust_data = []
+        self.pt1_data = []
+        self.pt2_data = []
+        self.pt3_data = []
+        self.pt4_data = []
+        self.pt5_data = []
+        self.all_data = []
+        self.times = []
+        self.display_times = []
+
         self.start_time = time.time()
         self.test_start_time = self.start_time
         self.running = True
         self.tail_deadline = None
         self.tail_saving_done = False
         self.abort_time = None
+        self.time_offset = None  # Reset time offset for new test
         self.update_graphs()
         self.start_button.config(background="green")
 
@@ -414,6 +438,14 @@ class GUI:
                 return BLP_Abort()
             return ("FV_03 opened")
 
+        def Ignition():
+            tel.ignite()
+            self.FV03_button.config(bg="green")
+            self.valve_status['FV-03'] = 1
+            self.OV03_button.config(bg="green")
+            self.valve_status['OV-03'] = 1
+            return ("Ignition executed: FV-03 + OV-03 opened + spark fired")
+
         function_map = {
             'Start_Count': Start_Count,
             'Read_OPD_02': Read_OPD_02,
@@ -423,6 +455,7 @@ class GUI:
             'NV_02': NV_02_Open,
             'OV_03': OV_03_Open,
             'FV_03': FV_03_Open,
+            'Ignition': Ignition,
             'BLP_Abort': BLP_Abort,
         }
 
@@ -468,47 +501,6 @@ class GUI:
                 print(f"Error loading file: {e}")
                 self.test_running = False
 
-    def open_both_valves_safe(self):
-        if self.busy:
-            return
-        self._disable_valve_buttons(True)
-
-        def step1():
-            tel.open_valve(V2)
-            tel.send_data()
-            self.FV03_button.config(bg="green")
-            self.valve_status['FV-03'] = 1
-            self.window.after(100, step2)
-
-        def step2():
-            tel.open_valve(V3)
-            tel.send_data()
-            self.OV03_button.config(bg="green")
-            self.valve_status['OV-03'] = 1
-            self._disable_valve_buttons(False)
-
-        self._with_lock(step1)
-
-    def close_both_valves_safe(self):
-        if self.busy:
-            return
-        self._disable_valve_buttons(True)
-
-        def step1():
-            tel.close_valve(V3)
-            tel.send_data()
-            self.OV03_button.config(bg="red")
-            self.valve_status['OV-03'] = 0
-            self.window.after(100, step2)
-
-        def step2():
-            tel.close_valve(V2)
-            tel.send_data()
-            self.FV03_button.config(bg="red")
-            self.valve_status['FV-03'] = 0
-            self._disable_valve_buttons(False)
-
-        self._with_lock(step1)
 
     def toggle_valve(self, name):
         if name == V4 and self.valve_status['NV-02'] == 0:
@@ -578,11 +570,20 @@ class GUI:
                 # Frame format: [t_ms, OPD01, OPD02, EPD01, FPD01, FPD02, THRUST]
                 t_ms, opd01, opd02, epd01, fpd01, fpd02, thrust = frame
 
-                # Use Arduino's timestamp (more accurate than Python time.time())
+                # Use Arduino's timestamp for CSV saving
                 ts = t_ms / 1000.0
 
-                # Append all data
-                self.times.append(ts)
+                # Set time offset from first frame to normalize to 0
+                if self.time_offset is None:
+                    self.time_offset = ts
+
+                # Normalize Arduino timestamp to start at 0 (for CSV)
+                arduino_elapsed = ts - self.time_offset
+                self.times.append(arduino_elapsed)
+
+                # Use Python time for smooth GUI display
+                python_elapsed = time.time() - self.start_time
+                self.display_times.append(python_elapsed)
                 self.pt1_data.append(opd01)  # OPD01
                 self.pt2_data.append(opd02)  # OPD02
                 self.pt3_data.append(epd01)  # EPD01
@@ -597,45 +598,69 @@ class GUI:
                 print(f"Error processing frame: {e}")
                 break
 
-        # If no new data, reschedule and return
+        # Update timer with Python elapsed time (always smooth and continuous)
+        elapsed = time.time() - self.start_time
+        self.timer_label.config(text=f"Elapsed Time: {elapsed:.3f} s")
+
+        # If no new data, reschedule and return (don't update graphs)
         if frames_processed == 0:
-            self.after_id = self.window.after(10, self.update_graphs)
+            self.after_id = self.window.after(50, self.update_graphs)
             return
 
-        # Update all graphs (only after processing all available frames)
-        self.pt1_line.set_data(range(len(self.pt1_data)), self.pt1_data)
-        self.pt1_ax.relim()
-        self.pt1_ax.autoscale_view()
-        self.pt1_canvas.draw()
+        # Downsample data for display (plot every 5th point to reduce clutter and improve performance)
+        # Use Python display_times for smooth GUI, Arduino times saved in CSV
+        downsample = 5
+        display_times = self.display_times[::downsample]
+        display_pt1 = self.pt1_data[::downsample]
+        display_pt2 = self.pt2_data[::downsample]
+        display_pt3 = self.pt3_data[::downsample]
+        display_pt4 = self.pt4_data[::downsample]
+        display_pt5 = self.pt5_data[::downsample]
+        display_thrust = self.thrust_data[::downsample]
 
-        self.pt2_line.set_data(range(len(self.pt2_data)), self.pt2_data)
-        self.pt2_ax.relim()
-        self.pt2_ax.autoscale_view()
-        self.pt2_canvas.draw()
+        # Helper function for smooth pencil-like drawing with blitting
+        def smooth_blit_update(ax, canvas, line, background, x_data, y_data):
+            # Update line data
+            line.set_data(x_data, y_data)
 
-        self.pt3_line.set_data(range(len(self.pt3_data)), self.pt3_data)
-        self.pt3_ax.relim()
-        self.pt3_ax.autoscale_view()
-        self.pt3_canvas.draw()
+            if len(x_data) > 0 and len(y_data) > 0:
+                # Get current limits
+                x_min, x_max = min(x_data), max(x_data)
+                y_min, y_max = min(y_data), max(y_data)
 
-        self.pt4_line.set_data(range(len(self.pt4_data)), self.pt4_data)
-        self.pt4_ax.relim()
-        self.pt4_ax.autoscale_view()
-        self.pt4_canvas.draw()
+                # Add padding for smoother appearance (10% margin)
+                y_range = y_max - y_min if y_max > y_min else 1
+                y_padding = y_range * 0.1
+                x_range = x_max - x_min if x_max > x_min else 1
+                x_padding = x_range * 0.05
 
-        self.pt5_line.set_data(range(len(self.pt5_data)), self.pt5_data)
-        self.pt5_ax.relim()
-        self.pt5_ax.autoscale_view()
-        self.pt5_canvas.draw()
+                # Check if we need to rescale (only when exceeding current bounds)
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+                needs_rescale = (x_max + x_padding > xlim[1] or x_min - x_padding < xlim[0] or
+                                y_max + y_padding > ylim[1] or y_min - y_padding < ylim[0])
 
-        self.thrust_line.set_data(range(len(self.thrust_data)), self.thrust_data)
-        self.thrust_ax.relim()
-        self.thrust_ax.autoscale_view()
-        self.thrust_canvas.draw()
+                if needs_rescale:
+                    # Set new limits and redraw background
+                    ax.set_xlim(x_min - x_padding, x_max + x_padding)
+                    ax.set_ylim(y_min - y_padding, y_max + y_padding)
+                    canvas.draw()
+                    return canvas.copy_from_bbox(ax.bbox)
+                else:
+                    # Use blitting for super smooth pencil-like drawing
+                    canvas.restore_region(background)
+                    ax.draw_artist(line)
+                    canvas.blit(ax.bbox)
+                    return background
+            return background
 
-        # Update timer with Arduino timestamp
-        if self.times:
-            self.timer_label.config(text=f"Elapsed Time: {self.times[-1]:.3f} s")
+        # Update all graphs with smooth blitting (pencil-like drawing effect)
+        self.pt1_bg = smooth_blit_update(self.pt1_ax, self.pt1_canvas, self.pt1_line, self.pt1_bg, display_times, display_pt1)
+        self.pt2_bg = smooth_blit_update(self.pt2_ax, self.pt2_canvas, self.pt2_line, self.pt2_bg, display_times, display_pt2)
+        self.pt3_bg = smooth_blit_update(self.pt3_ax, self.pt3_canvas, self.pt3_line, self.pt3_bg, display_times, display_pt3)
+        self.pt4_bg = smooth_blit_update(self.pt4_ax, self.pt4_canvas, self.pt4_line, self.pt4_bg, display_times, display_pt4)
+        self.pt5_bg = smooth_blit_update(self.pt5_ax, self.pt5_canvas, self.pt5_line, self.pt5_bg, display_times, display_pt5)
+        self.thrust_bg = smooth_blit_update(self.thrust_ax, self.thrust_canvas, self.thrust_line, self.thrust_bg, display_times, display_thrust)
 
         # Check alerts using latest values
         if self.pt3_data:
@@ -670,9 +695,9 @@ class GUI:
             messagebox.showinfo("Test Data Saved", "All telemetry data has been saved to test_data.csv")
             return
 
-        # Reschedule next update (50ms for GUI refresh, but data is 100Hz)
+        # Reschedule next update (30ms for smoother 33fps refresh, data is 100Hz)
         if self.running:
-            self.after_id = self.window.after(50, self.update_graphs)
+            self.after_id = self.window.after(30, self.update_graphs)
         else:
             self.after_id = None
 
