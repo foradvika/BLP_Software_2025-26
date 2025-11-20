@@ -327,7 +327,7 @@ class GUI:
         self.tail_deadline = None
         self.tail_saving_done = False
         self.abort_time = None
-        self.time_offset = None  # Reset time offset for new test
+        self.time_off = None  # Reset time offset for new test
         self.update_graphs()
         self.start_button.config(background="green")
         
@@ -610,8 +610,6 @@ class GUI:
                 if self.time_off is None:
                     self.time_off = ts 
                 elapsed = ts - self.time_off
-                print('elsaped')
-                print(elapsed)
 
                 # Append all data
                 self.times.append(elapsed)
